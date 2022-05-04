@@ -1,4 +1,5 @@
 import React from "react";
+import GameCanvas from "./components/GameCanvas";
 
 // Import the functions you need from the SDKs you need
 // import { initializeApp } from "firebase/app";
@@ -23,7 +24,7 @@ function App() {
   // const app = initializeApp(firebaseConfig);
   // const analytics = getAnalytics(app);
 
-  return <h3>Hello world! Typescript time!</h3>;
+  return <GameCanvas />;
 }
 
 export default App;
