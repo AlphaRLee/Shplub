@@ -9,5 +9,6 @@
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true
   },
-  "exclude": ["node_modules", "./build/**/*"]
+  "exclude": ["node_modules", "./build/**/*"],
+  "include": ["src", "index.d.ts"]
 }

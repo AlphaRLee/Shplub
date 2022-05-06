@@ -57,6 +57,25 @@ module.exports = {
           },
         ],
       },
+      {
+        test: /\.svg$/,
+        use: [
+          {
+            loader: "file-loader",
+            options: {
+              mimetype: "image/svg",
+            },
+          },
+        ],
+      },
+      // {
+      //   test: /\.(png|jpg|jpeg|gif)$/i,
+      //   type: "asset/resource",
+      // },
+      // {
+      //   test: /\.svg$/i,
+      //   type: "asset/resource",
+      // },
     ],
   },
   resolve: {
