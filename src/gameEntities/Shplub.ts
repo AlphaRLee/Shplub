@@ -1,7 +1,5 @@
 import Sprite, { SpriteParams } from "./Sprite";
 
-// import shplubNeutralImg from "../assets/shplub/shplub_neutral.png";
-
 class Shplub extends Sprite {
   public imageRepo: any;
 
