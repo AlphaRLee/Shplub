@@ -1,25 +1,15 @@
-import React, { useState, useEffect } from "react";
-import Shplub from "../gameEntities/Shplub";
-import Canvas from "./Canvas";
-import { loadImageRepo } from "../gameEntities/ImageRepo";
+import React, { useState, useEffect, useRef } from "react";
+import Game from "../gameEntities/Game";
 
 function GameCanvas(props: any) {
-  const [imageRepo, setImageRepo] = useState<any>();
-  const [shplub, setShplub] = useState<Shplub | undefined>();
+  const [game, setGame] = useState<Game | undefined>();
+
+  const canvasRef = useRef<HTMLCanvasElement | undefined>();
 
   // Main logic loop for canvas
   const draw = (ctx: CanvasRenderingContext2D, frameCount: number) => {
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    ctx.fillStyle = "#87CEEB";
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
-    ctx.fillStyle = "green";
-    ctx.fillRect(ctx.canvas.width / 4, 200, ctx.canvas.width / 2, 100);
-
-    if (!shplub) {
-      return;
-    }
-    shplub.draw(ctx, frameCount);
+    if (!game) return;
+    game.draw(ctx, frameCount);
   };
 
   // Set canvas to be fullscreen
@@ -27,26 +17,33 @@ function GameCanvas(props: any) {
   const canvasHeight = window.innerHeight;
 
   useEffect(() => {
-    setImageRepo(loadImageRepo());
-
-    setShplub(
-      new Shplub({
-        pos: { x: window.innerWidth / 2, y: window.innerHeight * 0.6 },
-        width: 150,
-        height: 130,
-      })
-    );
+    // useEffect is triggered after first render, so canvasRef.current will always be initialized
+    setGame(new Game(canvasRef.current));
   }, []);
 
+  // Render looping logic on canvas
   useEffect(() => {
-    if (imageRepo?.shplub) {
-      shplub.imageRepo = imageRepo.shplub;
-    }
-  }, [imageRepo]);
+    const canvas: HTMLCanvasElement = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+
+    let frameCount = 0;
+    let animationFrameId: number;
+
+    const render = () => {
+      frameCount++;
+      draw(ctx, frameCount);
+      animationFrameId = window.requestAnimationFrame(render);
+    };
+    render();
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+    };
+  }, [draw]);
 
   return (
     <div style={{ position: "fixed", left: 0, top: 0 }}>
-      <Canvas draw={draw} width={canvasWidth} height={canvasHeight} />
+      <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} />
     </div>
   );
 }
