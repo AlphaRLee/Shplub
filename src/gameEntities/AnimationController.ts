@@ -1,54 +1,57 @@
 import Position from "./Position";
 
-export interface AnimationFrame<T> {
+type statefulFn<T, S> = (animationState: AnimationState<S>, outerState: S) => T;
+type ValueOrFn<T, S> = T | statefulFn<T, S>;
+
+export interface AnimationFrame<S> {
   image: HTMLImageElement;
 
   // Use pre-defined duration or calculate the duration only once when the frame starts
   duration?: number;
-  durationFn?: (animationState: AnimationState<T>, outerState: T) => number;
+  durationFn?: statefulFn<number, S>;
   velocity?: Position; // Position change to apply every tick
 
   // The next frame index to use from the array of animation frames. Used first tick after this frame's duration ends.
   // If not defined, increments to next frame
   // If defined as function
-  nextFrameIndex?: number | ((animationState: AnimationState<T>, outerState: T) => number);
+  nextFrameIndex?: ValueOrFn<number, S>;
 }
 
-export interface Animation<T> {
+export interface Animation<S> {
   name: string;
-  frames: AnimationFrame<T>[];
-  repeat?: boolean;
+  frames: AnimationFrame<S>[];
+  repeat?: ValueOrFn<boolean, S>;
   startFrameIndex?: number; // Index of frame to start animation on
   restartFrameIndex?: number; // Index of frame to restart animation on after looping
 }
 
-export interface AnimationState<T> {
-  animation?: Animation<T>;
+export interface AnimationState<S> {
+  animation?: Animation<S>;
   frameIndex?: number;
-  frame?: AnimationFrame<T>;
+  frame?: AnimationFrame<S>;
   animationStartTime?: number;
   frameStartTime?: number;
   animationIsDone?: boolean;
   timesRepeated?: number;
 }
 
-export type SpriteAnimationOutput<T> = Pick<AnimationFrame<T>, "image" | "velocity"> &
-  Pick<AnimationState<T>, "animationIsDone" | "timesRepeated">;
+export type SpriteAnimationOutput<S> = Pick<AnimationFrame<S>, "image" | "velocity"> &
+  Pick<AnimationState<S>, "animationIsDone" | "timesRepeated">;
 
-export class AnimationController<T> {
-  private _state: AnimationState<T>;
-  private outerState: T;
+export class AnimationController<S> {
+  private _state: AnimationState<S>;
+  private outerState: S;
 
-  constructor(outerState: T) {
+  constructor(outerState: S) {
     this.outerState = outerState;
     this._state = {};
   }
 
-  public get state(): Readonly<AnimationState<T>> {
+  public get state(): Readonly<AnimationState<S>> {
     return this._state;
   }
 
-  public setAnimation(animation: Animation<T>, tickCount: number) {
+  public setAnimation(animation: Animation<S>, tickCount: number) {
     this._state.animation = animation;
     this._state.animationStartTime = tickCount;
     const startingIndex = animation.startFrameIndex || 0;
@@ -57,7 +60,7 @@ export class AnimationController<T> {
     this._state.timesRepeated = 0;
   }
 
-  public tick(tickCount: number): SpriteAnimationOutput<T> {
+  public tick(tickCount: number): SpriteAnimationOutput<S> {
     // Store the frame before the next potential frame
     const currentFrame = this._state.frame;
 
@@ -67,7 +70,7 @@ export class AnimationController<T> {
       this.nextFrame(tickCount);
     }
 
-    let output: SpriteAnimationOutput<T> = {
+    let output: SpriteAnimationOutput<S> = {
       image: currentFrame.image,
       animationIsDone: this._state.animationIsDone,
       timesRepeated: this._state.timesRepeated,
@@ -92,12 +95,13 @@ export class AnimationController<T> {
    * @returns Next frame index
    */
   private getNextFrameIndex(): number | undefined {
-    const nextFrameIndex = this.getNextFrameIndexFromFrame();
+    const nextFrameIndex = this.getOrEvaluate(this._state.frame.nextFrameIndex, this._state.frameIndex + 1);
 
     const animation = this._state.animation;
     if (nextFrameIndex < animation.frames.length) return nextFrameIndex;
 
-    if (animation.repeat) {
+    const repeat = this.getOrEvaluate(animation.repeat, false);
+    if (repeat) {
       this._state.timesRepeated++;
       return animation.restartFrameIndex || 0;
     } else {
@@ -137,7 +141,7 @@ export class AnimationController<T> {
     }
   }
 
-  private setDuration(frame: AnimationFrame<T>) {
+  private setDuration(frame: AnimationFrame<S>) {
     if (frame.durationFn) {
       frame.durationFn(this._state, this.outerState);
     }
@@ -145,5 +149,23 @@ export class AnimationController<T> {
 
   private endAnimation() {
     this._state.animationIsDone = true;
+  }
+
+  private getOrEvaluate<T>(property: ValueOrFn<T, S> | undefined, fallback: ValueOrFn<T, S>): T {
+    if (typeof property === "undefined") {
+      if (typeof fallback === "function") {
+        const fallbackFn = <Function>fallback;
+        return <T>fallbackFn(this._state, this.outerState);
+      } else {
+        return fallback;
+      }
+    }
+
+    if (typeof property === "function") {
+      const propFn = <Function>property;
+      return <T>propFn(this._state, this.outerState);
+    }
+
+    return property;
   }
 }
