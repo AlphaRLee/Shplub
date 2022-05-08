@@ -1,5 +1,6 @@
 import Sprite, { SpriteParams } from "./Sprite";
 import { AnimationController, Animation, AnimationState } from "./AnimationController";
+import random from "random";
 
 type ShplubAnim = Animation<Shplub>;
 
