@@ -7,9 +7,9 @@ function GameCanvas(props: any) {
   const canvasRef = useRef<HTMLCanvasElement | undefined>();
 
   // Main logic loop for canvas
-  const draw = (ctx: CanvasRenderingContext2D, frameCount: number) => {
+  const draw = (ctx: CanvasRenderingContext2D, tickCount: number) => {
     if (!game) return;
-    game.draw(ctx, frameCount);
+    game.draw(ctx, tickCount);
   };
 
   // Set canvas to be fullscreen
@@ -26,12 +26,12 @@ function GameCanvas(props: any) {
     const canvas: HTMLCanvasElement = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
-    let frameCount = 0;
+    let tickCount = 0;
     let animationFrameId: number;
 
     const render = () => {
-      frameCount++;
-      draw(ctx, frameCount);
+      tickCount++;
+      draw(ctx, tickCount);
       animationFrameId = window.requestAnimationFrame(render);
     };
     render();

@@ -3,7 +3,7 @@ import Shplub from "./Shplub";
 
 class Game {
   private canvas: HTMLCanvasElement;
-  private frameCount: number = 0;
+  private tickCount: number = 0;
   private imageRepo = loadImageRepo();
   private shplub: Shplub;
 
@@ -11,7 +11,7 @@ class Game {
     this.canvas = canvas;
     this.shplub = new Shplub(
       {
-        pos: { x: window.innerWidth / 2, y: window.innerHeight * 0.6 },
+        pos: { x: window.innerWidth / 2 - 300, y: window.innerHeight * 0.6 },
         width: 150,
         height: 130,
       },
@@ -33,17 +33,14 @@ class Game {
     this.canvas.addEventListener("touchcancel", this.pressCancelEventHandler);
   }
 
-  public draw(ctx: CanvasRenderingContext2D, frameCount: number) {
-    this.frameCount = frameCount;
+  public draw(ctx: CanvasRenderingContext2D, tickCount: number) {
+    this.tickCount = tickCount;
 
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     ctx.fillStyle = "#87CEEB";
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    ctx.fillStyle = "green";
-    ctx.fillRect(ctx.canvas.width / 4, 200, ctx.canvas.width / 2, 100);
-
-    this.shplub.draw(ctx, frameCount);
+    this.shplub.draw(ctx, tickCount);
   }
 
   private pressEventHandler = (event: MouseEvent) => {
