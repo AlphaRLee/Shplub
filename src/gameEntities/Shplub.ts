@@ -22,12 +22,26 @@ class Shplub extends Sprite {
         name: "neutral",
         frames: [
           {
-            image: this.imageRepo.neutral,
-            duration: 2,
+            image: this.imageRepo.neutral.idle,
+            duration: 10,
           },
         ],
         repeat: true,
-      } as ShplubAnim,
+      },
+      blink: {
+        name: "blink",
+        frames: [
+          {
+            image: this.imageRepo.neutral.eyesClosed,
+            duration: 5,
+          },
+          {
+            image: this.imageRepo.neutral.idle,
+            duration: 8,
+          },
+        ],
+        repeat: true,
+      },
       walk: {
         left: {
           name: "walk.left",
@@ -61,7 +75,7 @@ class Shplub extends Sprite {
           repeat: true,
           startFrameIndex: 1,
           restartFrameIndex: 0,
-        } as ShplubAnim,
+        },
         right: {
           name: "walk.right",
           frames: [
@@ -94,14 +108,21 @@ class Shplub extends Sprite {
           repeat: true,
           startFrameIndex: 1,
           restartFrameIndex: 0,
-        } as ShplubAnim,
+        },
       },
     };
+
+    const c = this.animations.neutral;
   }
 
   draw(ctx: CanvasRenderingContext2D, tickCount: number) {
-    if (!this.animationController.state.animation) {
-      this.animationController.setAnimation(this.animations.walk.right, tickCount);
+    // if (!this.animationController.state.animation) {
+    //   this.animationController.setAnimation(this.animations.walk.right, tickCount);
+    // }
+
+    const animation = this.selectIdleAnimation();
+    if (animation) {
+      this.animationController.setAnimation(animation, tickCount);
     }
 
     const { image, velocity } = this.animationController.tick(tickCount);
@@ -113,14 +134,47 @@ class Shplub extends Sprite {
     ctx.drawImage(image, this.pos.x, this.pos.y);
   }
 
-  selectIdleAnimation() {
+  private selectIdleAnimation(): Animation<Shplub> {
     const animState = this.animationController.state;
-    const animation = animState.animation;
+    let animation = animState.animation;
     if (!animation) return this.animations.neutral;
 
-    if (!animState.animationIsDone) return animation;
+    if (!animState.animationIsDone) return undefined;
 
-    const rand = Math.random();
+    switch (animation.name) {
+      case "neutral":
+        break;
+      case "blink":
+        if (animState.timesRepeated > random.poisson(1)()) return this.animations.neutral;
+        break;
+      default:
+        if (animState.timesRepeated < random.poisson(5)()) return undefined;
+        break;
+    }
+
+    if (animState.timesRepeated < random.poisson(5)()) {
+      if (animation.name === "neutral" && animState.timesRepeated > random.poisson(4)()) {
+        return this.animations.blink;
+      } else if (animation.name === "blink" && animState.timesRepeated > random.poisson(1)()) {
+        return this.animations.neutral;
+      } else {
+        return undefined;
+      }
+    }
+
+    const halfWindowWidth = window.innerWidth / 2;
+    const directionRand = random.float();
+    const directionCutoff = this.sigmoid((6 * (this.centerX - halfWindowWidth)) / halfWindowWidth);
+    animation = directionRand > directionCutoff ? this.animations.walk.right : this.animations.walk.left;
+
+    const neutralRand = random.float();
+    animation = neutralRand < 0.7 ? this.animations.neutral : animation;
+
+    return animation;
+  }
+
+  private sigmoid(x: number): number {
+    return 1 / (1 + Math.exp(-x));
   }
 }
 

@@ -30,6 +30,8 @@ function GameCanvas(props: any) {
     let animationFrameId: number;
 
     const render = () => {
+      ctx.canvas.width = window.innerWidth;
+      ctx.canvas.height = window.innerHeight;
       tickCount++;
       draw(ctx, tickCount);
       animationFrameId = window.requestAnimationFrame(render);

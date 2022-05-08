@@ -11,7 +11,7 @@ class Game {
     this.canvas = canvas;
     this.shplub = new Shplub(
       {
-        pos: { x: window.innerWidth / 2 - 300, y: window.innerHeight * 0.6 },
+        pos: { x: window.innerWidth / 2 - 150 / 2, y: window.innerHeight * 0.6 },
         width: 150,
         height: 130,
       },

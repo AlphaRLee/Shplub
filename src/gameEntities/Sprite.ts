@@ -34,6 +34,14 @@ class Sprite {
   get bottom() {
     return this.pos.y + this.height;
   }
+
+  get centerX() {
+    return this.pos.x + this.width / 2;
+  }
+
+  get centerY() {
+    return this.pos.y + this.height / 2;
+  }
 }
 
 export default Sprite;

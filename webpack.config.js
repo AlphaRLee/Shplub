@@ -36,6 +36,12 @@ module.exports = {
         },
       },
       {
+        test: /\.m?js$/,
+        resolve: {
+          fullySpecified: false,
+        },
+      },
+      {
         test: /\.css$/,
         use: [
           {
@@ -68,14 +74,6 @@ module.exports = {
           },
         ],
       },
-      // {
-      //   test: /\.(png|jpg|jpeg|gif)$/i,
-      //   type: "asset/resource",
-      // },
-      // {
-      //   test: /\.svg$/i,
-      //   type: "asset/resource",
-      // },
     ],
   },
   resolve: {

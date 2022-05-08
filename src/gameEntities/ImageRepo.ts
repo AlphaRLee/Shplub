@@ -1,4 +1,5 @@
 import shplubNeutralImg from "../assets/shplub/shplub_neutral.svg";
+import shplubNeutralEyesClosed from "../assets/shplub/shplub_neutral_eyes_closed.svg";
 import shplubLookLeft0Img from "../assets/shplub/shplub_look_left0.svg";
 import shplubLookLeft1Img from "../assets/shplub/shplub_look_left1.svg";
 import shplubLookLeft2Img from "../assets/shplub/shplub_look_left2.svg";
@@ -12,7 +13,7 @@ import shplubWalkRight2Img from "../assets/shplub/shplub_walk_right2.svg";
 
 const imageSources = {
   shplub: {
-    neutral: shplubNeutralImg,
+    neutral: { idle: shplubNeutralImg, eyesClosed: shplubNeutralEyesClosed },
     look: {
       left: [shplubLookLeft0Img, shplubLookLeft1Img, shplubLookLeft2Img],
       right: [shplubLookRight0Img, shplubLookRight1Img, shplubLookRight2Img],

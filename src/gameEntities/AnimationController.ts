@@ -61,12 +61,14 @@ export class AnimationController<S> {
   }
 
   public tick(tickCount: number): SpriteAnimationOutput<S> {
+    this._state.animationIsDone = false;
+
     // Store the frame before the next potential frame
     const currentFrame = this._state.frame;
 
     const maxDuration = this._state.frame.duration;
     const currentDuration = tickCount - this._state.frameStartTime;
-    if (currentDuration > maxDuration) {
+    if (currentDuration >= maxDuration) {
       this.nextFrame(tickCount);
     }
 
@@ -82,16 +84,11 @@ export class AnimationController<S> {
 
   private nextFrame(tickCount: number) {
     let frameIndex = this.getNextFrameIndex();
-    if (typeof frameIndex === "undefined") {
-      this.endAnimation();
-    }
-
     this.setFrame(frameIndex, tickCount);
   }
 
   /**
    * Get next frame index or return undefined if there is no next frame
-   * @param nextFrameIndex Attempted next frame to use. If outside of frames array length then animation repeat property will be considered, else returns undefined
    * @returns Next frame index
    */
   private getNextFrameIndex(): number | undefined {
@@ -100,27 +97,13 @@ export class AnimationController<S> {
     const animation = this._state.animation;
     if (nextFrameIndex < animation.frames.length) return nextFrameIndex;
 
+    this._state.animationIsDone = true;
     const repeat = this.getOrEvaluate(animation.repeat, false);
     if (repeat) {
       this._state.timesRepeated++;
       return animation.restartFrameIndex || 0;
     } else {
       return undefined;
-    }
-  }
-
-  private getNextFrameIndexFromFrame(): number | never {
-    const stateNextFrameIndex = this._state.frame.nextFrameIndex;
-    switch (typeof stateNextFrameIndex) {
-      case "function":
-        return stateNextFrameIndex(this._state, this.outerState);
-      case "number":
-        return stateNextFrameIndex;
-      case "undefined":
-        return this._state.frameIndex + 1;
-      default:
-        console.error("animationFrame.nextFrameIndex is an unrecognized type. animationFrame:", this._state.frame);
-        throw new Error("animationFrame.nextFrameIndex is an unrecognized type.");
     }
   }
 
@@ -145,10 +128,6 @@ export class AnimationController<S> {
     if (frame.durationFn) {
       frame.durationFn(this._state, this.outerState);
     }
-  }
-
-  private endAnimation() {
-    this._state.animationIsDone = true;
   }
 
   private getOrEvaluate<T>(property: ValueOrFn<T, S> | undefined, fallback: ValueOrFn<T, S>): T {
