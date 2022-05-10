@@ -7,7 +7,7 @@ function GameCanvas(props) {
     var draw = function (ctx, tickCount) {
         if (!game)
             return;
-        game.draw(ctx, tickCount);
+        game.tick(ctx, tickCount);
     };
     // Set canvas to be fullscreen
     var canvasWidth = window.innerWidth;
@@ -25,8 +25,8 @@ function GameCanvas(props) {
         var render = function () {
             ctx.canvas.width = window.innerWidth;
             ctx.canvas.height = window.innerHeight;
-            tickCount++;
             draw(ctx, tickCount);
+            tickCount++;
             animationFrameId = window.requestAnimationFrame(render);
         };
         render();
