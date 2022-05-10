@@ -1,3 +1,4 @@
+import happyBDayImg from "../assets/shplub/happy_bday.svg";
 import shplubNeutralImg from "../assets/shplub/shplub_neutral.svg";
 import shplubNeutralEyesClosed from "../assets/shplub/shplub_neutral_eyes_closed.svg";
 import shplubLookLeft0Img from "../assets/shplub/shplub_look_left0.svg";
@@ -10,8 +11,15 @@ import shplubWalkLeft1Img from "../assets/shplub/shplub_walk_left1.svg";
 import shplubWalkLeft2Img from "../assets/shplub/shplub_walk_left2.svg";
 import shplubWalkRight1Img from "../assets/shplub/shplub_walk_right1.svg";
 import shplubWalkRight2Img from "../assets/shplub/shplub_walk_right2.svg";
+import shplubSquished0Img from "../assets/shplub/shplub_squished0.svg";
+import shplubSquished1Img from "../assets/shplub/shplub_squished1.svg";
+import shplubSquished2Img from "../assets/shplub/shplub_squished2.svg";
+import shplubSquishedSquint0Img from "../assets/shplub/shplub_squished_squint0.svg";
+import shplubSquishedSquint1Img from "../assets/shplub/shplub_squished_squint1.svg";
+import shplubSquishedSquint2Img from "../assets/shplub/shplub_squished_squint2.svg";
 
 const imageSources = {
+  bday: happyBDayImg,
   shplub: {
     neutral: { idle: shplubNeutralImg, eyesClosed: shplubNeutralEyesClosed },
     look: {
@@ -21,6 +29,10 @@ const imageSources = {
     walk: {
       left: [shplubWalkLeft1Img, shplubWalkLeft2Img, shplubLookLeft2Img],
       right: [shplubWalkRight1Img, shplubWalkRight2Img, shplubLookRight2Img],
+    },
+    squish: {
+      neutral: [shplubSquished0Img, shplubSquished1Img, shplubSquished2Img],
+      squint: [shplubSquishedSquint0Img, shplubSquishedSquint1Img, shplubSquishedSquint2Img],
     },
   },
 };

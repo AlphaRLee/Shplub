@@ -1,14 +1,14 @@
 import Position from "./Position";
 
-type statefulFn<T, S> = (animationState: AnimationState<S>, outerState: S) => T;
-type ValueOrFn<T, S> = T | statefulFn<T, S>;
+type StatefulFn<T, S> = (animationState: AnimationState<S>, outerState: S) => T;
+type ValueOrFn<T, S> = T | StatefulFn<T, S>;
 
 export interface AnimationFrame<S> {
   image: HTMLImageElement;
 
   // Use pre-defined duration or calculate the duration only once when the frame starts
   duration?: number;
-  durationFn?: statefulFn<number, S>;
+  durationFn?: StatefulFn<number, S>;
   velocity?: Position; // Position change to apply every tick
 
   // The next frame index to use from the array of animation frames. Used first tick after this frame's duration ends.
@@ -23,6 +23,11 @@ export interface Animation<S> {
   repeat?: ValueOrFn<boolean, S>;
   startFrameIndex?: number; // Index of frame to start animation on
   restartFrameIndex?: number; // Index of frame to restart animation on after looping
+  data?: any; // Grab bag of arbitrary data set by user
+  onStart?: StatefulFn<void, S>;
+  onEnd?: StatefulFn<void, S>;
+  onRepeat?: StatefulFn<void, S>;
+  onTick?: StatefulFn<boolean, S>;
 }
 
 export interface AnimationState<S> {
@@ -32,11 +37,13 @@ export interface AnimationState<S> {
   animationStartTime?: number;
   frameStartTime?: number;
   animationIsDone?: boolean;
+  animationIsRepeating?: boolean;
+  animationIsInterrupted?: boolean;
   timesRepeated?: number;
 }
 
 export type SpriteAnimationOutput<S> = Pick<AnimationFrame<S>, "image" | "velocity"> &
-  Pick<AnimationState<S>, "animationIsDone" | "timesRepeated">;
+  Pick<AnimationState<S>, "animationIsDone" | "animationIsRepeating" | "animationIsInterrupted" | "timesRepeated">;
 
 export class AnimationController<S> {
   private _state: AnimationState<S>;
@@ -52,31 +59,58 @@ export class AnimationController<S> {
   }
 
   public setAnimation(animation: Animation<S>, tickCount: number) {
+    // Clean up old animation first, if any
+    this._state.animation?.onEnd?.(this._state, this.outerState);
+
     this._state.animation = animation;
     this._state.animationStartTime = tickCount;
     const startingIndex = animation.startFrameIndex || 0;
     this.setFrame(startingIndex, tickCount);
+
     this._state.animationIsDone = false;
+    this._state.animationIsRepeating = false;
+    this._state.animationIsInterrupted = false;
+
     this._state.timesRepeated = 0;
+
+    this._state.animation.onStart?.(this._state, this.outerState);
   }
 
   public tick(tickCount: number): SpriteAnimationOutput<S> {
-    this._state.animationIsDone = false;
-
     // Store the frame before the next potential frame
     const currentFrame = this._state.frame;
 
+    let output: SpriteAnimationOutput<S> = {
+      image: currentFrame?.image,
+      animationIsDone: this._state.animationIsDone,
+      animationIsRepeating: this._state.animationIsRepeating,
+      animationIsInterrupted: this._state.animationIsInterrupted,
+      timesRepeated: this._state.timesRepeated,
+    };
+
+    // Exit early if animation is finished
+    if (this._state.animationIsDone || this._state.animationIsInterrupted) {
+      return output;
+    }
+
+    // Reset repeating state
+    this._state.animationIsRepeating = false;
+
+    if (this._state.animation.onTick?.(this._state, this.outerState)) {
+      this.interruptAnimation();
+    }
+
     const maxDuration = this._state.frame.duration;
     const currentDuration = tickCount - this._state.frameStartTime;
-    if (currentDuration >= maxDuration) {
+    if (!this._state.animationIsInterrupted && currentDuration >= maxDuration) {
       this.nextFrame(tickCount);
     }
 
-    let output: SpriteAnimationOutput<S> = {
-      image: currentFrame.image,
-      animationIsDone: this._state.animationIsDone,
-      timesRepeated: this._state.timesRepeated,
-    };
+    output.animationIsDone = this._state.animationIsDone;
+    output.animationIsRepeating = this._state.animationIsRepeating;
+    output.animationIsInterrupted = this._state.animationIsInterrupted;
+    output.timesRepeated = this._state.timesRepeated;
+
     if (currentFrame.velocity) output.velocity = currentFrame.velocity;
 
     return output;
@@ -97,12 +131,14 @@ export class AnimationController<S> {
     const animation = this._state.animation;
     if (nextFrameIndex < animation.frames.length) return nextFrameIndex;
 
-    this._state.animationIsDone = true;
     const repeat = this.getOrEvaluate(animation.repeat, false);
     if (repeat) {
+      this._state.animationIsRepeating = true;
+      this._state.animation.onRepeat?.(this._state, this.outerState);
       this._state.timesRepeated++;
       return animation.restartFrameIndex || 0;
     } else {
+      this.endAnimation();
       return undefined;
     }
   }
@@ -128,6 +164,16 @@ export class AnimationController<S> {
     if (frame.durationFn) {
       frame.durationFn(this._state, this.outerState);
     }
+  }
+
+  private endAnimation() {
+    this._state.animationIsDone = true;
+    this._state.animation.onEnd?.(this._state, this.outerState);
+  }
+
+  private interruptAnimation() {
+    this._state.animationIsInterrupted = true;
+    this.endAnimation();
   }
 
   private getOrEvaluate<T>(property: ValueOrFn<T, S> | undefined, fallback: ValueOrFn<T, S>): T {

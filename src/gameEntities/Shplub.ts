@@ -1,19 +1,26 @@
 import Sprite, { SpriteParams } from "./Sprite";
 import { AnimationController, Animation, AnimationState } from "./AnimationController";
 import random from "random";
-
-type ShplubAnim = Animation<Shplub>;
+import Position from "./Position";
+import Game from "./Game";
 
 class Shplub extends Sprite {
   public imageRepo: any;
+  private game: Game;
   public animations: any;
-  private animationController: AnimationController<Shplub>;
+  private animationController: AnimationController<Game>;
+  private prevImage: HTMLImageElement;
+  public activityState: "idle" | "looking" | "squishing" | "squished" | "unsquishing";
 
-  constructor(params: SpriteParams, imageRepo: any) {
+  constructor(params: SpriteParams, imageRepo: any, game: Game) {
     super(params);
     this.imageRepo = imageRepo;
-    this.animationController = new AnimationController(this);
+    this.game = game;
+    this.animationController = new AnimationController(this.game);
 
+    this.activityState = "idle";
+
+    const squishDuration = 3;
     const walkAnimDuration = 10;
     const walkXVelocity = 6;
 
@@ -42,15 +49,75 @@ class Shplub extends Sprite {
         ],
         repeat: true,
       },
+      squish: {
+        neutral: {
+          name: "squish.neutral",
+          frames: [
+            {
+              image: this.imageRepo.squish.neutral[0],
+              duration: squishDuration,
+            },
+            {
+              image: this.imageRepo.squish.neutral[1],
+              duration: squishDuration,
+            },
+            {
+              image: this.imageRepo.squish.neutral[2],
+              duration: squishDuration * 3,
+            },
+          ],
+          onEnd: (animState: AnimationState<Game>, game: Game) => {
+            game.shplub.activityState = "squished";
+          },
+        },
+        squished: {
+          name: "squish.squished",
+          frames: [
+            {
+              image: this.imageRepo.squish.neutral[2],
+              duration: 2,
+            },
+          ],
+          repeat: true,
+        },
+        neutralReverse: {
+          name: "squish.neutralReverse",
+          frames: [
+            {
+              image: this.imageRepo.squish.neutral[2],
+              duration: squishDuration,
+            },
+            {
+              image: this.imageRepo.squish.neutral[1],
+              duration: squishDuration,
+            },
+            {
+              image: this.imageRepo.squish.neutral[0],
+              duration: squishDuration,
+            },
+            {
+              image: this.imageRepo.neutral.idle,
+              duration: squishDuration,
+            },
+            {
+              image: this.imageRepo.squish.neutral[1],
+              duration: squishDuration,
+            },
+            {
+              image: this.imageRepo.idle,
+              duration: squishDuration,
+            },
+          ],
+          onEnd: (animState: AnimationState<Game>, game: Game) => {
+            game.shplub.activityState = "idle";
+          },
+          // repeat: true,
+        },
+      },
       walk: {
         left: {
           name: "walk.left",
           frames: [
-            {
-              image: this.imageRepo.walk.left[0],
-              duration: walkAnimDuration,
-              velocity: { x: 0, y: 0 },
-            },
             {
               image: this.imageRepo.walk.left[1],
               duration: walkAnimDuration,
@@ -75,15 +142,14 @@ class Shplub extends Sprite {
           repeat: true,
           startFrameIndex: 1,
           restartFrameIndex: 0,
+          data: {
+            startPos: { ...this.pos },
+          },
+          onEnd: this.restoreYPos,
         },
         right: {
           name: "walk.right",
           frames: [
-            {
-              image: this.imageRepo.walk.right[0],
-              duration: walkAnimDuration,
-              velocity: { x: 0, y: 0 },
-            },
             {
               image: this.imageRepo.walk.right[1],
               duration: walkAnimDuration,
@@ -108,21 +174,24 @@ class Shplub extends Sprite {
           repeat: true,
           startFrameIndex: 1,
           restartFrameIndex: 0,
+          data: {
+            startPos: { ...this.pos },
+          },
+          onEnd: this.restoreYPos,
         },
       },
     };
-
-    const c = this.animations.neutral;
   }
 
-  draw(ctx: CanvasRenderingContext2D, tickCount: number) {
-    // if (!this.animationController.state.animation) {
-    //   this.animationController.setAnimation(this.animations.walk.right, tickCount);
-    // }
+  private restoreYPos = (animState: AnimationState<Game>) => {
+    this.pos.y = animState.animation.data.startPos.y;
+  };
 
-    const animation = this.selectIdleAnimation();
+  public tick(ctx: CanvasRenderingContext2D, tickCount: number) {
+    const animation = this.selectAnimation();
+
     if (animation) {
-      this.animationController.setAnimation(animation, tickCount);
+      this.setAnimation(animation, tickCount);
     }
 
     const { image, velocity } = this.animationController.tick(tickCount);
@@ -131,15 +200,38 @@ class Shplub extends Sprite {
       this.pos.y += velocity.y;
     }
 
-    ctx.drawImage(image, this.pos.x, this.pos.y);
+    // Fallback to old image if needed
+    if (image) {
+      this.prevImage = image;
+    }
+    ctx.drawImage(image || this.prevImage, this.pos.x, this.pos.y);
   }
 
-  private selectIdleAnimation(): Animation<Shplub> {
+  public setAnimation(animation: Animation<Game>, tickCount: number) {
+    this.animationController.setAnimation(animation, tickCount);
+  }
+
+  private selectAnimation(): Animation<Game> {
+    switch (this.activityState) {
+      case "idle":
+        return this.selectIdleAnimation();
+      case "squishing":
+        return this.animations.squish.neutral;
+      case "squished":
+        return this.animations.squish.squished;
+      case "unsquishing":
+        return this.animations.squish.neutralReverse;
+      case "looking":
+        break;
+    }
+  }
+
+  private selectIdleAnimation(): Animation<Game> {
     const animState = this.animationController.state;
     let animation = animState.animation;
     if (!animation) return this.animations.neutral;
 
-    if (!animState.animationIsDone) return undefined;
+    if (!animState.animationIsDone && !animState.animationIsRepeating) return undefined;
 
     switch (animation.name) {
       case "neutral":
@@ -147,8 +239,12 @@ class Shplub extends Sprite {
       case "blink":
         if (animState.timesRepeated > random.poisson(1)()) return this.animations.neutral;
         break;
+      case "squish.neutral":
+      case "squish.neutralReverse":
+        return this.animations.neutral;
+      case "walk":
       default:
-        if (animState.timesRepeated < random.poisson(5)()) return undefined;
+        if (animState.timesRepeated < random.poisson(4)()) return undefined;
         break;
     }
 
@@ -175,6 +271,10 @@ class Shplub extends Sprite {
 
   private sigmoid(x: number): number {
     return 1 / (1 + Math.exp(-x));
+  }
+
+  public isPosInside(pos: Position) {
+    return pos.x >= this.left && pos.x <= this.right && pos.y >= this.top && pos.y <= this.bottom;
   }
 }
 
